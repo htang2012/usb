@@ -10,3 +10,40 @@ sudo fxload -D /dev/bus/usb/003/062 -I erase_eeprom.ihx -t fx2
 
 sudo fxload -v -D /dev/bus/usb/003/063 -I convert_serial2.ihx -c 0x01 -s vend_ax.hex -t fx2
 
+5) after that you get ID 1199:0017 Sierra Wireless, Inc. Modem converter device.
+
+dmesg
+[49341.084362] usb 3-8: USB disconnect, device number 75
+[49342.168022] usb 3-8: new high-speed USB device number 76 using ehci-pci
+[49342.302317] usb 3-8: New USB device found, idVendor=0e0f, idProduct=f800
+[49342.302321] usb 3-8: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+[49342.302324] usb 3-8: Product: Smoker FX2
+[49342.302327] usb 3-8: Manufacturer: VMware
+[49911.528777] usb 3-8: USB disconnect, device number 76
+[49913.380026] usb 3-8: new high-speed USB device number 77 using ehci-pci
+[49913.516279] usb 3-8: New USB device found, idVendor=1199, idProduct=0017
+[49913.516283] usb 3-8: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+[49913.516286] usb 3-8: Product: FX2 case converter
+[49913.516289] usb 3-8: Manufacturer: WieserLabs & freesoft.org
+[49913.516749] sierra 3-8:1.0: Sierra USB modem converter detected
+[49913.517008] usb 3-8: Sierra USB modem converter now attached to ttyUSB0
+
+6) Test this device with two terminals:
+
+terminal 1		 	 terminal 2
+
+cat /dev/ttyUSB0                cat > /dev/ttyUSB0
+
+
+
+
+
+
+
+For more info:
+http://www.triplespark.net/elec/periph/USB-FX2/eeprom/
+http://www.triplespark.net/elec/periph/USB-FX2/software/advanced_examples.html
+
+
+
+
