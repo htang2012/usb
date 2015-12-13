@@ -1,0 +1,7 @@
+#!/bin/bash
+1)  use lsusb to find out which usb device you want to program.
+lsusb
+2) use fxload to program firmware on your device eeprom.
+sudo fxload -v -D /dev/bus/usb/003/063 -I convert_serial2.ihx -c 0x01 -s vend_ax.hex -t fx2
+
+
