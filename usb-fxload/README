@@ -1,0 +1,15 @@
+1) get cypress Dev board with Cypress Semiconductor Corp. CY7C68013 EZ-USB FX2 USB 2.0 Development Kit, it is Cypress fx2 device.
+
+2)use lsusb to find out which usb device you want to program.
+lsusb
+
+3) if you want to erase the eeprom on your device:
+sudo fxload -D /dev/bus/usb/003/062 -I erase_eeprom.ihx -t fx2
+
+4) if you have firmware in .ihx format and use fxload to program firmware on your device eeprom.
+
+sudo fxload -v -D /dev/bus/usb/003/063 -I convert_serial2.ihx -c 0x01 -s vend_ax.hex -t fx2
+
+
+
+
