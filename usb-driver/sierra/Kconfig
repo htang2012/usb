@@ -1,0 +1,6 @@
+config USB_SIERRA
+        tristate "USB 2.0 SIERRA TTY dongle support"
+
+
+
+
