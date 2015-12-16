@@ -58,16 +58,19 @@ enum {
 
 static int state = 0;
 static struct libusb_device_handle *devh = NULL;
-static unsigned char imgbuf[0x400];
+static unsigned char txbuf[2048];
+static unsigned char rxbuf[2048];
 static unsigned char irqbuf[INTR_LENGTH];
-static struct libusb_transfer *img_transfer = NULL;
+static struct libusb_transfer *tx_transfer = NULL;
+static struct libusb_transfer *rx_transfer = NULL;
 static struct libusb_transfer *irq_transfer = NULL;
 static int img_idx = 0;
 static int do_exit = 0;
 
+
 static int find_dpfp_device(void)
 {
-	devh = libusb_open_device_with_vid_pid(NULL, 0x04b4, 0x1003);
+	devh = libusb_open_device_with_vid_pid(NULL, 0x0e0f, 0x0017);
 	return devh ? 0 : -EIO;
 }
 
@@ -346,51 +349,70 @@ int hexdump( unsigned char *buf,  int dlen)
 
 
 
-static void LIBUSB_CALL cb_img(struct libusb_transfer *transfer)
+static void LIBUSB_CALL cb_tx(struct libusb_transfer *transfer)
 {
         static counter = 0;
 	if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
 		fprintf(stderr, "img transfer status %d?\n", transfer->status);
 		do_exit = 2;
 		libusb_free_transfer(transfer);
-		img_transfer = NULL;
-		return;
-	}
-
-        printf ("Callback image buffer transfered length: %d\n", transfer->actual_length);
-
-        hexdump(imgbuf, transfer->actual_length);
-        counter ++;
-
-
-
-	if (next_state() < 0 || counter == 8) {
-		do_exit = 2;
+		tx_transfer = NULL;
 		return;
 	}
         
-	if (libusb_submit_transfer(img_transfer) < 0)
-		do_exit = 2;
+        hexdump(txbuf, sizeof (txbuf));
+        printf ("Callback tx buffer transfered length: %d\n", transfer->actual_length);
+
 }
+
+static void LIBUSB_CALL cb_rx(struct libusb_transfer *transfer)
+{
+      if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
+          fprintf(stderr, "img transfer status %d?\n", transfer->status);
+          do_exit = 2;
+          libusb_free_transfer(transfer);
+          rx_transfer = NULL;
+          return;
+      }
+      printf ("Callback rx buffer transfered length: %d\n", transfer->actual_length);
+      hexdump(rxbuf, transfer->actual_length);
+}
+
+
+
+
+
 
 static int init_capture(void)
 {
 	int r;
 
-	r = libusb_submit_transfer(img_transfer);
+	r = libusb_submit_transfer(tx_transfer);
         printf("init_capture r is %d\n", r);
+        r = libusb_submit_transfer(rx_transfer);
+        
 
 }
 
+
 static int alloc_transfers(void)
 {
-	img_transfer = libusb_alloc_transfer(0);
-	if (!img_transfer)
+        int i = 0;	
+	tx_transfer = libusb_alloc_transfer(0);
+        rx_transfer = libusb_alloc_transfer(0);
+	if (!tx_transfer)
 		return -ENOMEM;
+        if (!rx_transfer)
+                return -ENOMEM; 
+        
+        for ( i = 0; i< 2048; i++)
+          txbuf[i] = (unsigned char) i;
 
-	libusb_fill_bulk_transfer(img_transfer, devh, EP_DATA, imgbuf,
-		sizeof(imgbuf), cb_img, NULL, 0);
+	libusb_fill_bulk_transfer(tx_transfer, devh, 0x02, txbuf,
+		sizeof(txbuf), cb_tx, NULL, 0);
 
+	libusb_fill_bulk_transfer(rx_transfer, devh, 0x86, rxbuf,
+		sizeof(rxbuf), cb_rx, NULL, 0);
 	return 0;
 }
 
@@ -427,9 +449,11 @@ int main(void)
 	/* async from here onwards */
 
 	r = alloc_transfers();
-	if (r < 0)
+	if (r < 0){
+             printf(" r = %d\n", r);
 		goto out_deinit;
-
+        }
+        printf ("Alloc transfers done\n");
 	r = init_capture();
 	if (r < 0)
 		goto out_deinit;
@@ -449,13 +473,13 @@ int main(void)
 
 	printf("shutting down...\n");
 
-	if (img_transfer) {
-		r = libusb_cancel_transfer(img_transfer);
+	if (tx_transfer) {
+		r = libusb_cancel_transfer(tx_transfer);
 		if (r < 0)
 			goto out_deinit;
 	}
 
-	while (img_transfer)
+	while (tx_transfer||rx_transfer)
 		if (libusb_handle_events(NULL) < 0)
 			break;
 
@@ -466,7 +490,8 @@ int main(void)
 
 out_deinit:
         printf ("de init is done");
-	libusb_free_transfer(img_transfer);
+	libusb_free_transfer(tx_transfer);
+        libusb_free_transfer(rx_transfer);
 out_release:
         
 	libusb_release_interface(devh, 0);
