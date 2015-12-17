@@ -1,3 +1,4 @@
+
 /*
  * USB Skeleton driver - 2.2
  *
