@@ -23,7 +23,7 @@
 
 
 /* Define these values to match your devices */
-#define USB_SKEL_VENDOR_ID	0x0e0f
+#define USB_SKEL_VENDOR_ID	0x8086
 #define USB_SKEL_PRODUCT_ID	0x0017
 
 /* table of devices that work with this driver */
@@ -70,10 +70,21 @@ struct usb_skel {
 static struct usb_driver sierra_driver;
 static void sierra_draw_down(struct usb_skel *dev);
 
+#define trace(x) do {  \
+printk(">>>>>>>>>>>>>>>>>>>>>>>\n");                      \
+printk("Caller is %pS\n", __builtin_return_address(x+3));    \
+printk("Caller is %pS\n", __builtin_return_address(x+2));  \
+printk("Caller is %pS\n", __builtin_return_address(x+1));  \
+printk("Caller is %pS\n", __builtin_return_address(x));    \
+printk("Function is: %s\n", __PRETTY_FUNCTION__);	   \
+printk("<<<<<<<<<<<<<<<<<<<<<<<\n");                      \
+}while(0)
+
+
 static void sierra_delete(struct kref *kref)
 {
 	struct usb_skel *dev = to_sierra_dev(kref);
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	usb_free_urb(dev->bulk_in_urb);
 	usb_put_dev(dev->udev);
 	kfree(dev->bulk_in_buffer);
@@ -88,7 +99,7 @@ static int sierra_open(struct inode *inode, struct file *file)
 	int retval = 0;
 
 	subminor = iminor(inode);
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 
 	interface = usb_find_interface(&sierra_driver, subminor);
 	if (!interface) {
@@ -121,7 +132,7 @@ exit:
 static int sierra_release(struct inode *inode, struct file *file)
 {
 	struct usb_skel *dev;
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	dev = file->private_data;
 	if (dev == NULL)
 		return -ENODEV;
@@ -141,7 +152,7 @@ static int sierra_flush(struct file *file, fl_owner_t id)
 {
 	struct usb_skel *dev;
 	int res;
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	dev = file->private_data;
 	if (dev == NULL)
 		return -ENODEV;
@@ -164,7 +175,7 @@ static int sierra_flush(struct file *file, fl_owner_t id)
 static void sierra_read_bulk_callback(struct urb *urb)
 {
 	struct usb_skel *dev;
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	dev = urb->context;
 
 	spin_lock(&dev->err_lock);
@@ -190,7 +201,7 @@ static void sierra_read_bulk_callback(struct urb *urb)
 static int sierra_do_read_io(struct usb_skel *dev, size_t count)
 {
 	int rv;
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	/* prepare a read */
 	usb_fill_bulk_urb(dev->bulk_in_urb,
 			dev->udev,
@@ -230,7 +241,7 @@ static ssize_t sierra_read(struct file *file, char *buffer, size_t count,
 	struct usb_skel *dev;
 	int rv;
 	bool ongoing_io;
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	dev = file->private_data;
 
 	/* if we cannot read at all, return EOF */
@@ -339,7 +350,7 @@ static void sierra_write_bulk_callback(struct urb *urb)
 
 	dev = urb->context;
 
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	/* sync/async unlink faults aren't errors */
 	if (urb->status) {
 		if (!(urb->status == -ENOENT ||
@@ -368,7 +379,7 @@ static ssize_t sierra_write(struct file *file, const char *user_buffer,
 	struct urb *urb = NULL;
 	char *buf = NULL;
 	size_t writesize = min(count, (size_t)MAX_TRANSFER);
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	dev = file->private_data;
 
 	/* verify that we actually have some data to write */
@@ -499,7 +510,7 @@ static int sierra_probe(struct usb_interface *interface,
 	int i;
 	int retval = -ENOMEM;
 
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 
 	dev_info(&interface->dev,
 		 "sierra_probe USB skeleton device %d",
@@ -589,7 +600,7 @@ static void sierra_disconnect(struct usb_interface *interface)
 {
 	struct usb_skel *dev;
 	int minor = interface->minor;
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	dev = usb_get_intfdata(interface);
 	usb_set_intfdata(interface, NULL);
 
@@ -612,7 +623,7 @@ static void sierra_disconnect(struct usb_interface *interface)
 static void sierra_draw_down(struct usb_skel *dev)
 {
 	int time;
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	time = usb_wait_anchor_empty_timeout(&dev->submitted, 1000);
 	if (!time)
 		usb_kill_anchored_urbs(&dev->submitted);
@@ -622,7 +633,7 @@ static void sierra_draw_down(struct usb_skel *dev)
 static int sierra_suspend(struct usb_interface *intf, pm_message_t message)
 {
 	struct usb_skel *dev = usb_get_intfdata(intf);
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	if (!dev)
 		return 0;
 	sierra_draw_down(dev);
@@ -631,14 +642,14 @@ static int sierra_suspend(struct usb_interface *intf, pm_message_t message)
 
 static int sierra_resume(struct usb_interface *intf)
 {
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	return 0;
 }
 
 static int sierra_pre_reset(struct usb_interface *intf)
 {
 	struct usb_skel *dev = usb_get_intfdata(intf);
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	mutex_lock(&dev->io_mutex);
 	sierra_draw_down(dev);
 
@@ -648,7 +659,7 @@ static int sierra_pre_reset(struct usb_interface *intf)
 static int sierra_post_reset(struct usb_interface *intf)
 {
 	struct usb_skel *dev = usb_get_intfdata(intf);
-        printk("Caller is %pS\n", __builtin_return_address(0));
+        trace(0);
 	/* we are sure no URBs are active - no locking needed */
 	dev->errors = -EPIPE;
 	mutex_unlock(&dev->io_mutex);
